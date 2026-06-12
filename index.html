@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Key Value</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0f172a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      gap: 1.5rem;
+    }
+
+    header { text-align: center; }
+    header h1 { font-size: 1.75rem; font-weight: 700; }
+    header p  { font-size: 0.875rem; color: #94a3b8; margin-top: 0.25rem; }
+
+    .panel {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Key display */
+    .key-display {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .key-box {
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      border-radius: 14px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .key-box.active {
+      border-color: #6366f1;
+      background: #1e1b4b;
+    }
+
+    .key-box-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    .key-box-value {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: #a5b4fc;
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-all;
+      transition: color 0.15s;
+    }
+
+    .key-box.active .key-box-value { color: #818cf8; }
+
+    .key-box-sub {
+      font-size: 0.7rem;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    /* Waiting state */
+    .waiting {
+      text-align: center;
+      color: #475569;
+      font-size: 0.85rem;
+      padding: 0.5rem;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Modifier indicators */
+    .modifiers {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .mod-badge {
+      background: #0f172a;
+      border: 1.5px solid #334155;
+      border-radius: 10px;
+      padding: 0.6rem 0.5rem;
+      text-align: center;
+      transition: all 0.12s;
+    }
+
+    .mod-badge.active {
+      background: #312e81;
+      border-color: #6366f1;
+    }
+
+    .mod-name {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .mod-badge.active .mod-name { color: #a5b4fc; }
+
+    .mod-val {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #ef4444;
+      font-family: monospace;
+    }
+
+    .mod-badge.active .mod-val { color: #22c55e; }
+
+    /* History log */
+    .history-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .history-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #475569;
+    }
+
+    .history-log {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      height: 110px;
+      overflow-y: auto;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .history-log::-webkit-scrollbar { width: 4px; }
+    .history-log::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    .log-entry {
+      font-size: 0.72rem;
+      font-family: 'Courier New', monospace;
+      color: #94a3b8;
+      display: flex;
+      gap: 8px;
+      animation: slideIn 0.15s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform: translateX(-4px); } to { opacity:1; transform: none; } }
+
+    .log-key   { color: #a5b4fc; font-weight: 700; min-width: 60px; }
+    .log-code  { color: #7dd3fc; }
+    .log-mods  { color: #86efac; }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #475569;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⌨️ Key Value</h1>
+    <p>Press any key to see its value and code</p>
+  </header>
+
+  <div class="panel">
+
+    <!-- Main key display -->
+    <div class="key-display">
+      <div class="key-box" id="box-key">
+        <div class="key-box-label">Key</div>
+        <div class="key-box-value" id="val-key">—</div>
+        <div class="key-box-sub">Character</div>
+      </div>
+      <div class="key-box" id="box-code">
+        <div class="key-box-label">Key Code</div>
+        <div class="key-box-value" id="val-code">—</div>
+        <div class="key-box-sub">event.code</div>
+      </div>
+    </div>
+
+    <p class="waiting" id="waiting-msg">Press any key...</p>
+
+    <!-- Modifier indicators -->
+    <div class="modifiers">
+      <div class="mod-badge" id="mod-alt">
+        <div class="mod-name">Alt</div>
+        <div class="mod-val" id="val-alt">False</div>
+      </div>
+      <div class="mod-badge" id="mod-ctrl">
+        <div class="mod-name">Ctrl</div>
+        <div class="mod-val" id="val-ctrl">False</div>
+      </div>
+      <div class="mod-badge" id="mod-meta">
+        <div class="mod-name">Meta</div>
+        <div class="mod-val" id="val-meta">False</div>
+      </div>
+      <div class="mod-badge" id="mod-shift">
+        <div class="mod-name">Shift</div>
+        <div class="mod-val" id="val-shift">False</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-wrap">
+      <div class="history-label">Key History</div>
+      <div class="history-log" id="history-log">
+        <div class="log-entry" style="color:#334155">— no keys pressed yet —</div>
+      </div>
+    </div>
+
+    <p class="hint">Click on the page first if keys aren't registering</p>
+
+  </div>
+
+  <script>
+    const valKey   = document.getElementById('val-key');
+    const valCode  = document.getElementById('val-code');
+    const boxKey   = document.getElementById('box-key');
+    const boxCode  = document.getElementById('box-code');
+    const waitMsg  = document.getElementById('waiting-msg');
+    const histLog  = document.getElementById('history-log');
+
+    const mods = {
+      alt:   { badge: document.getElementById('mod-alt'),   val: document.getElementById('val-alt')   },
+      ctrl:  { badge: document.getElementById('mod-ctrl'),  val: document.getElementById('val-ctrl')  },
+      meta:  { badge: document.getElementById('mod-meta'),  val: document.getElementById('val-meta')  },
+      shift: { badge: document.getElementById('mod-shift'), val: document.getElementById('val-shift') },
+    };
+
+    let flashTimer = null;
+    let firstKey = true;
+
+    /* ── Tone ── */
+    function playTone(freq = 440) {
+      try {
+        const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch(e) {}
+    }
+
+    /* ── Key tone map ── */
+    function keyToFreq(code) {
+      // Map A-Z and 0-9 to musical-ish frequencies
+      const notes = [261,277,294,311,330,349,370,392,415,440,466,494,
+                     523,554,587,622,659,698,740,784,831,880,932,988,1047,1109];
+      if (code.startsWith('Key')) {
+        const idx = code.charCodeAt(3) - 65;
+        return notes[idx % notes.length];
+      }
+      if (code.startsWith('Digit')) {
+        return 300 + (parseInt(code[5]) * 40);
+      }
+      return 440;
+    }
+
+    /* ── Add log entry ── */
+    function addLog(key, code, modStr) {
+      // Remove placeholder
+      const placeholder = histLog.querySelector('[style]');
+      if (placeholder) placeholder.remove();
+
+      // Keep max 20 entries
+      while (histLog.children.length >= 20) histLog.removeChild(histLog.firstChild);
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <span class="log-key">${key === ' ' ? 'Space' : key || '(none)'}</span>
+        <span class="log-code">${code}</span>
+        <span class="log-mods">${modStr || ''}</span>
+      `;
+      histLog.appendChild(entry);
+      histLog.scrollTop = histLog.scrollHeight;
+    }
+
+    /* ── Keydown handler ── */
+    document.addEventListener('keydown', (e) => {
+      // prevent browser shortcuts from hijacking (allow default for F5 etc)
+      if (!['F5','F12'].includes(e.code)) e.preventDefault();
+
+      const key  = e.key;
+      const code = e.code;
+
+      // Display
+      valKey.textContent  = key === ' ' ? 'Space' : key;
+      valCode.textContent = code;
+
+      // Flash background
+      boxKey.classList.add('active');
+      boxCode.classList.add('active');
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => {
+        boxKey.classList.remove('active');
+        boxCode.classList.remove('active');
+      }, 200);
+
+      // Modifiers
+      const modActive = [];
+      setMod('alt',   e.altKey,     modActive);
+      setMod('ctrl',  e.ctrlKey,    modActive);
+      setMod('meta',  e.metaKey,    modActive);
+      setMod('shift', e.shiftKey,   modActive);
+
+      // Hide waiting
+      if (firstKey) { waitMsg.style.display = 'none'; firstKey = false; }
+
+      // Tone — frequency varies with key
+      playTone(keyToFreq(code));
+
+      // Log
+      addLog(key, code, modActive.join('+'));
+    });
+
+    document.addEventListener('keyup', (e) => {
+      setMod('alt',   e.altKey);
+      setMod('ctrl',  e.ctrlKey);
+      setMod('meta',  e.metaKey);
+      setMod('shift', e.shiftKey);
+    });
+
+    function setMod(name, active, arr) {
+      const m = mods[name];
+      m.val.textContent = active ? 'True' : 'False';
+      m.badge.classList.toggle('active', active);
+      if (arr && active) arr.push(name);
+    }
+  </script>
+</body>
+</html>
